@@ -6,16 +6,11 @@ the smoothing length in the n-body code.
 import numpy
 import time
 
-from amuse.community.phiGRAPE.interface import PhiGRAPE
-from amuse.community.hermite0.interface import Hermite
-from amuse.community.huayno.interface import Huayno
-from amuse.community.bhtree.interface import BHTree
 from amuse.community.ph4.interface import ph4
 
 from amuse.units import nbody_system
 from amuse.units.quantities import AdaptingVectorQuantity
 from amuse.datamodel import Particles
-from amuse.couple import bridge
 from matplotlib import pyplot
 
 
@@ -34,18 +29,15 @@ def new_particles():
 
     return particles
 
-def run_pyth(interface,tend=100,dt=0.125,parameters=[], label=""):
+def run_pyth(interface,tend=100,dt=0.125, label=""):
 
-    gravity = ph4()
+    code = interface()
 
-    for name,value in parameters:
-        dt_gravity = value
+    code.parameters.timestep_parameter = dt.value_in(nbody_system.time)
+    code.particles.add_particles(new_particles())
 
-    gravity.parameters.timestep_parameter = dt_gravity
-    gravity.particles.add_particles(new_particles())
-
-    Ekin = gravity.kinetic_energy
-    Epot = gravity.potential_energy
+    Ekin = code.kinetic_energy
+    Epot = code.potential_energy
     Einit = Ekin + Epot
 
     Energy = [Einit.value_in(nbody_system.energy)]
@@ -61,56 +53,63 @@ def run_pyth(interface,tend=100,dt=0.125,parameters=[], label=""):
 
         t=t+dt
 
-        gravity.evolve_model(t)
+        code.evolve_model(t)
 
-        x.append(gravity.particles.x)
-        y.append(gravity.particles.y)
+        x.append(code.particles.x)
+        y.append(code.particles.y)
 
-        Ekin = gravity.kinetic_energy
-        Epot = gravity.potential_energy
+        Ekin = code.kinetic_energy
+        Epot = code.potential_energy
         Etot = Ekin + Epot
 
         Energy.append(Etot.value_in(nbody_system.energy))
         Times.append(t.value_in(nbody_system.time))
 
-    print gravity.particles
+    code.stop()
 
-    gravity.stop()
+    return x,y,Times,Energy
 
-    eta_lx = label.split(", ")[1]
-    eta = (eta_lx.split("=")[1]).split("$")[0]
-
-    #numpy.savetxt("energy_"+eta+".txt",Energy)
-
-    f = pyplot.figure()
-    pyplot.plot(Times, -100.0*(Energy-Energy[0])/Energy[0])
-    pyplot.title("Change: "+str(((Energy[0]-Energy[-1])/Energy[0])*100)+"% \n with "+eta_lx)
-    pyplot.xlabel("Time")
-    pyplot.ylabel("Energy")
-    pyplot.savefig("energy_time_"+eta+".png")
-    pyplot.close()
-
-    return x,y
 
 if __name__ in ('__main__', '__plot__'):
-  codes_to_run=[ #('Hermite0, $\eta=0.03$', Hermite,  [("dt_param",0.03)] ),
-                 #('Hermite0, $\eta=0.01$', Hermite,  [("dt_param",0.01)]),
-                 ('Hermite0, $\eta=0.01$', Hermite,  [("dt_param",0.01)] ),
-                 ('Hermite0, $\eta=0.001$', Hermite,  [("dt_param",0.001)] ) ]
-  N=(len(codes_to_run)-1)/2+1
-  f=pyplot.figure(figsize=(8,4*N))
 
-  for i,(label,interface,parameters) in enumerate(codes_to_run):
-    x,y=run_pyth(interface,tend=100 | nbody_system.time ,dt=0.0625 | nbody_system.time,parameters=parameters, label=label)
-    x = x.value_in(nbody_system.length)
-    y = y.value_in(nbody_system.length)
-    subplot=f.add_subplot(N,2,i+1)
-    subplot.plot(x[:,0],y[:,0],'r')
-    subplot.plot(x[:,1],y[:,1],'b')
-    subplot.plot(x[:,2],y[:,2],'g')
-    subplot.set_title(label)
-    subplot.set_xlim(-8,8)
-    subplot.set_ylim(-6,6)
+    parameters = [1.0,0.1,0.01,0.001]
 
-  pyplot.savefig("pythagorean_ph4.png")
-  pyplot.close()
+    codes_to_run=[ ('ph4: dt = '+str(parameters[0]), ph4,  parameters[0]),
+                 ('ph4: dt = '+str(parameters[1]), ph4,  parameters[1]),
+                 ('ph4: dt = '+str(parameters[2]), ph4,  parameters[2]),
+                 ('ph4: dt = '+str(parameters[3]), ph4,  parameters[3])]
+
+    nrows = 2
+    ncols = 4
+    f=pyplot.figure(figsize=(32,16))
+
+    for i,(label,interface,dts) in enumerate(codes_to_run):
+
+        x,y,times,energies = run_pyth(interface, tend=100 | nbody_system.time, dt=dts | nbody_system.time, label=label)
+
+        x = x.value_in(nbody_system.length)
+        y = y.value_in(nbody_system.length)
+
+        subplot=f.add_subplot(nrows,ncols,i+1)
+
+        subplot.plot(x[:,0],y[:,0],'r')
+        subplot.plot(x[:,1],y[:,1],'b')
+        subplot.plot(x[:,2],y[:,2],'g')
+
+        subplot.set_title(label)
+        subplot.set_xlabel("$x$", fontsize=20)
+        subplot.set_ylabel("$y$", fontsize=20)
+        subplot.set_xlim(-8,8)
+        subplot.set_ylim(-6,6)
+
+
+        subplot=f.add_subplot(nrows,ncols,i+5)
+
+        subplot.plot(times, (energies-energies[0])/energies[0])
+
+        subplot.set_title("Total Change: "+str((energies[-1]-energies[0])/energies[0])+"\n with dt = "+str(parameters[i]))
+        subplot.set_xlabel("$t$", fontsize=20)
+        subplot.set_ylabel(r"$\Delta E/E$", fontsize=20)
+
+    pyplot.savefig("pythagorean_ph4.png")
+    pyplot.close()
