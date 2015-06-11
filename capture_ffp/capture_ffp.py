@@ -35,7 +35,8 @@ def initialize_code(bodies, code=Huayno, timestep_parameter=0.0169):
 def get_planets(m0,
                 a_planets,
                 m_planets,
-                e_planets):
+                e_planets,
+                phi=0.):
 
     # particle set with all planets
     planets = Particles()
@@ -46,7 +47,7 @@ def get_planets(m0,
                                                        m_planets[i],
                                                        a_planets[i],
                                                        e_planets[i],
-                                                       true_anomaly=0.)
+                                                       true_anomaly=phi)
         # center on the star
         star_planet.position -= star_planet[0].position
         star_planet.velocity -= star_planet[0].velocity
@@ -230,12 +231,16 @@ def plot_trayectory(x,y):
 
     plot(x1,y1,'y',label='Star')
     plot(x2,y2,'c',label='FFP')
-    plot(x3,y3,'m',label='BP')
+    plot(x3,y3,'m',label='BP',alpha=0.5)
 
     title('Trajectory FFP (nbody units)')
     xlabel("$x$", fontsize=20)
     ylabel("$y$", fontsize=20)
     legend()
+
+    scatter(x1[0],y1[0],c='black',marker='*')
+    scatter(x2[0],y2[0],c='black')
+    scatter(x3[0],y3[0],c='black')
 
     scatter(x1[-1],y1[-1],c='y',marker='*')
     scatter(x2[-1],y2[-1],c='c')
@@ -246,7 +251,7 @@ def plot_trayectory(x,y):
 
     savefig('trajectory.png')
 
-    xlim(-1.5,1.1)
+    xlim(-3,1.1)
     ylim(-1,1)
 
     savefig('trajectory_zoom.png')
@@ -293,6 +298,9 @@ def plot_orbital_elements(times,eccentricities,semimajoraxes):
 
 def new_option_parser():
     result = argparse.ArgumentParser()
+    result.add_argument("--phi",
+                      dest="phi", default = 0., type=float, action="store",
+                      help="initial angle for of the bounded planet [%default]")
     result.add_argument("--fout",
                       dest="fout",  default="capture_ffp.hdf5", type=str, action="store",
                       help="output file [data.hdf5]")
@@ -306,7 +314,7 @@ def new_option_parser():
                       dest="vinf", default = 3.0, type=float, action="store",
                       help="velocity of the FFP at a large distance (infinity) in km/s [%default]")
     result.add_argument("--m_ffp",
-                      dest="m_ffp", default = 0.7, type=float, action="store",
+                      dest="m_ffp", default = 1.0, type=float, action="store",
                       help="mass of the FFP MJupiter [%default]")
     result.add_argument("--n_steps",
                       dest="n_steps", default = 10, type=int, action="store",
@@ -324,12 +332,14 @@ if __name__ in ('__main__', '__plot__'):
     a_planets = [converter.to_nbody(5. | units.AU)]
     m_planets = [converter.to_nbody(1. | units.MJupiter)]
     e_planets = [0.]  # circular orbit
+    phi = arg.phi
 
     # initialize planets
     planets = get_planets(converter.to_nbody(arg.m0 | units.MSun),
                           a_planets,
                           m_planets,
-                          e_planets)
+                          e_planets,
+                          phi)
 
     m0_units = converter.to_nbody(arg.m0 | units.MSun)
     b_units = converter.to_nbody(arg.b | units.AU)
@@ -377,7 +387,7 @@ if __name__ in ('__main__', '__plot__'):
 
 ##### TO DO:
 
-# * create parameter phi for the planet in orbit -- so i can try with the values of b and phi stated in the paper
+# * create parameter phi for the planet in orbit -- so i can try with the values of b and phi stated in the paper (what are the units of phi in the plot? radians?)
 # * fix the units of the output (i think some of them are still in nbody, not physical ones)
 
 
