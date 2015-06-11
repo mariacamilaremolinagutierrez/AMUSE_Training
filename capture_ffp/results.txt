@@ -1,0 +1,18 @@
+ ** star + FFP orbital elements: 
+ 		 e = 1.00001759521 
+ 		 a = -1440.11681546 length
+ ** evolving: 
+ 		 t_start =  0.0 yr
+		 t_end =  650.0 yr
+		 dt =  0.065 yr 
+
+		 E_tot =  -1.68405161724e+35 m**2 * s**-2 * kg 
+
+		 (E_f - E_i)/E_tot =  -0.000418801969113 
+
+ ** binary energies:
+		 energy for Star and FFP : 1.77466965728e-06 length**2 * time**-2 * mass
+		 energy for FFP and BP : 0.000490954653342 length**2 * time**-2 * mass
+		 energy for BP and Star : -0.000478085017029 length**2 * time**-2 * mass
+
+		 result = flyby 
