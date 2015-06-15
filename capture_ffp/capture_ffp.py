@@ -1,8 +1,4 @@
-import math
-import numpy
-import argparse
-import os
-import time
+import math, numpy, argparse, os, time
 
 from matplotlib.pyplot import *
 
@@ -24,11 +20,7 @@ def initialize_code(bodies, code=SmallN, timestep_parameter=0.0169):
 
     return stars_gravity
 
-def get_planets(m0,
-                a_planets,
-                m_planets,
-                e_planets,
-                phi=0.):
+def get_planets(m0, a_planets, m_planets, e_planets, phi=0.):
 
     #Particle set with all planets
     planets = Particles()
@@ -47,37 +39,22 @@ def get_planets(m0,
 
     return planets
 
-def get_ffp_in_orbit_2(m0,
-                        m,
-                        a,
-                        e,
-                        phi=0.):
+def get_ffp_in_orbit_2(m0, m, a, e, phi):
 
     """
     initialize attributes of the star and the ffp.
     """
 
-    m0_and_ffp_in_orbit = Particles(2)
+    star_ffp = new_binary_from_orbital_elements(m0, m, a, e, true_anomaly=phi)
+    star_ffp.position -= star_ffp[0].position
+    star_ffp.velocity -= star_ffp[0].velocity
 
-    #Central star
-    m0_and_ffp_in_orbit[0].mass = m0
-    m0_and_ffp_in_orbit[0].position = (0,0,0) | nbody_system.length
-    m0_and_ffp_in_orbit[0].velocity = (0,0,0) | nbody_system.speed
+    print star_ffp
+    print 'v_inf_orb =',(star_ffp[1].vx**2+star_ffp[1].vy**2+star_ffp[1].vz**2).sqrt()
 
-    #INCOMPLETE!!! (There are other orbital elements that I need)
-    m0_and_ffp_in_orbit[1] = new_binary_from_orbital_elements(m0, m, a, e, true_anomaly=phi)
+    return star_ffp
 
-    #Center on the star
-    m0_and_ffp_in_orbit[1].position -= m0_and_ffp_in_orbit[0].position
-    m0_and_ffp_in_orbit[1].velocity -= m0_and_ffp_in_orbit[0].velocity
-
-    return m0_and_ffp_in_orbit
-
-def get_ffp_in_orbit(m0,
-                     b_ffp,
-                     vinf_ffp,
-                     m_ffp,
-                     r_inf):
+def get_ffp_in_orbit(m0, b_ffp, vinf_ffp, m_ffp, r_inf):
     """
     initialize attributes of the star and the ffp.
     """
@@ -128,15 +105,9 @@ def energies_binaries(bodies, indexA, indexB):
 
     binary_energy = kinetic_energy+potential_energy
 
-    print '\t\t energy for',labels[indexA],'and',labels[indexB],':',binary_energy
-
     return binary_energy
 
-def evolve_gravity(bodies,
-                   number_of_planets,
-                   converter,
-                   t_end,
-                   n_steps):
+def evolve_gravity(bodies, number_of_planets, converter, t_end, n_steps):
 
     #Positions and velocities centered on the center of mass
     bodies.move_to_center()
@@ -151,23 +122,16 @@ def evolve_gravity(bodies,
     y = AdaptingVectorQuantity()
     times = AdaptingVectorQuantity()
 
-    #Order> 12, 23, 31
+    #Order: 12, 23, 31
     eccentricities = []
     semimajoraxes = []
 
     Etot_init = gravity.kinetic_energy + gravity.potential_energy
     Etot = Etot_init
-    Emax = 0.0 | nbody_system.energy
+    DeltaE_max = 0.0 | nbody_system.energy
 
+    times.append(time)
     system_energies = [Etot.value_in(nbody_system.energy)]
-
-    print " ** evolving:"
-    print "\t\t t_start = 0.0 yr"
-    print "\t\t t_end = ", converter.to_si(t_end).as_quantity_in(units.yr)
-    print "\t\t dt = ", converter.to_si(dt).as_quantity_in(units.yr)
-    print "\t\t n_steps = ", n_steps, "\n"
-    print "\t\t E_tot = ", converter.to_si(Etot_init), "\n"
-    #print " \t\t", "time", "\t\t", "dE/E", "\t\t\t", "[r_m0_FFP, r_m0_planets]"
 
     while time<=t_end:
 
@@ -191,27 +155,20 @@ def evolve_gravity(bodies,
                 eccentricities.append(eccentricity)
                 semimajoraxes.append(semimajor_axis.value_in(nbody_system.length))
 
-        Ekin = gravity.kinetic_energy
-        Epot = gravity.potential_energy
-        Etot = Ekin + Epot
+        Etot = gravity.kinetic_energy + gravity.potential_energy
+        DeltaE = abs(Etot-Etot_init)
 
         system_energies.append(Etot.value_in(nbody_system.energy))
 
-        if ( abs(Etot) > Emax ):
-            Emax = Etot
+        if ( DeltaE > DeltaE_max ):
+            DeltaE_max = DeltaE
 
         time += dt
 
-    print "\t\t (E_max - E_tot)/E_tot = ", (Emax-Etot_init)/Etot_init, "\n"
+    print "Energy Change: max(|E_j - E_initial|)/E_initial = ", DeltaE_max/Etot_init
 
-    # binaries_energy = []
-    #
-    # for i in range(0,number_of_planets+2):
-    #     for j in range(i+1,number_of_planets+2):
-    #         binary_energy=energies_binaries(bodies, i, j).value_in(nbody_system.energy)
-    #         binaries_energy.append(binary_energy)
-
-    results = ['flyby', 'temporary capture', 'exchange']
+    #results = ['flyby', 'temporary capture', 'exchange']
+    results = [0,1,2,-1]
 
     planets_star_energies = []
 
@@ -229,21 +186,18 @@ def evolve_gravity(bodies,
     elif (planets_star_energy>0 and ffp_star_energy<0):
         res = results[2]
     else:
-        res = 'something that is not flyby, exchange or temporary capture has happened!'
+        #res = 'something that is not flyby, exchange or temporary capture has happened!'
+        res = results[3]
 
-    print " ** trajectory result: \n\t\t result =", res, "\n"
+    print res
 
     gravity.stop()
-
-    print " ** done evolving"
-
-    print system_energies
 
     return x,y,times,numpy.array(system_energies),numpy.array(eccentricities),numpy.array(semimajoraxes)
 
 def plot_trajectory(x,y,number_of_planets):
 
-    colors = ['green', 'magenta', 'DarkOrange', 'red']
+    colors = ['magenta', 'green', 'DarkOrange', 'red']
 
     f=figure(figsize=(35,15))
 
@@ -293,16 +247,17 @@ def plot_energy(times, energies):
 
     initial_energy = energies[0]
     energies = (energies-initial_energy)/initial_energy
+    times = times.value_in(nbody_system.time)
 
     f=figure(figsize=(15,15))
 
     plot(times,energies,color='black')
 
-    axhline(y=initial_energy, xmin=0, xmax=times[-1], c='m', linestyle='--')
+    axhline(y=0, xmin=0, xmax=times[-1], c='m', linestyle='--')
 
     title('Total Energy of the System (nbody units)')
     xlabel("$t$", fontsize=20)
-    ylabel("$\Delta E / E$", fontsize=20)
+    ylabel("$|\Delta E| / E$", fontsize=20)
 
     savefig('energy.png')
     close()
@@ -374,7 +329,7 @@ def new_option_parser():
 
     #Steps of integrator
     result.add_argument("--n_steps",
-                        dest="n_steps", default = 4000, type=int, action="store",
+                        dest="n_steps", default = 5000, type=int, action="store",
                         help="number of steps for the integrator [%default]")
 
     #Variable parameters
@@ -387,13 +342,7 @@ def new_option_parser():
 
     return result
 
-if __name__ in ('__main__', '__plot__'):
-
-    #Time starts
-    start_time = time.time()
-
-    #Converter used in this program
-    converter = nbody_system.nbody_to_si(1 | units.MSun,  5 | units.AU)
+def get_initial_parameters(converter):
 
     #Options
     arg = new_option_parser().parse_args()
@@ -410,21 +359,9 @@ if __name__ in ('__main__', '__plot__'):
     e_planets = arg.e_planets
     number_of_planets  = len(m_planets)
 
-    print ' ** number of planets: '+str(number_of_planets)+'\n'
-
     #Variable parameters
     phi = arg.phi
     b = converter.to_nbody(arg.b | units.AU)
-
-    #Initialize planets
-    planets = get_planets(m0,
-                          a_planets,
-                          m_planets,
-                          e_planets,
-                          phi)
-
-    #Initial distance to the planet (x-cordinate)
-    r_inf = 40.*max(a_planets)
 
     #Set the velocity of FFP assuming parabolic orbit with respect to the star
     if arg.vinf is None:
@@ -435,36 +372,36 @@ if __name__ in ('__main__', '__plot__'):
     else:
         vinf = converter.to_nbody(arg.vinf | units.kms)
 
+    return t_end,n_steps,number_of_planets,m0,m_planets,a_planets,e_planets,m_ffp,phi,b,vinf
+
+
+if __name__ in ('__main__', '__plot__'):
+
+    #Converter used in this program
+    converter = nbody_system.nbody_to_si(1 | units.MSun,  5 | units.AU)
+
+    #Time starts
+    start_time = time.time()
+
+    #Get initial parameters for the functions above
+    t_end,n_steps,number_of_planets,m0,m_planets,a_planets,e_planets,m_ffp,phi,b,vinf = get_initial_parameters(converter)
+
+    #Initialize planets
+    planets = get_planets(m0,a_planets,m_planets,e_planets,phi)
+
+    #Initial distance to the planet (x-cordinate)
+    r_inf = 40.*max(a_planets)
+
     #Initialize star and FFP
-    star_and_ffp_in_orbit = get_ffp_in_orbit(m0,
-                                             b,
-                                             vinf,
-                                             m_ffp,
-                                             r_inf)
+    star_and_ffp_in_orbit = get_ffp_in_orbit(m0,b,vinf,m_ffp,r_inf)
 
     #Particle superset: star, FFP, planets
     bodies = ParticlesSuperset([star_and_ffp_in_orbit, planets])
 
-    x,y,times,energies,eccentricities,semimajoraxes = evolve_gravity(bodies,
-                                                                    number_of_planets,
-                                                                    converter,
-                                                                    t_end,
-                                                                    n_steps)
+    x,y,times,energies,eccentricities,semimajoraxes = evolve_gravity(bodies,number_of_planets,converter,t_end,n_steps)
+
     plot_trajectory(x,y,number_of_planets)
-    #plot_energy(times, energies)
+    plot_energy(times, energies)
     #plot_orbital_elements(times,eccentricities,semimajoraxes,number_of_planets)
 
     print '\nTime:', time.time()-start_time, 'seconds.'
-
-##### TO DO:
-
-# * fix the units of the output (i think some of them are still in nbody, not physical ones)
-
-#### DONE:
-
-# * units -- converter for units from the paper <--> physical units
-# * plot of the experiment in the XY plane -- save and plot positions (xy) of the experiment and plot the result
-# * orbital elements -- save eccentricity and semi-major axis of the star--FFP and star--planet pairs
-#                    -- plot evolution of the orbital elements
-# * energies -- function to calculate energy of a binary (particle set with two particles)
-# * create parameter phi for the planet in orbit -- so i can try with the values of b and phi stated in the paper (what are the units of phi in the plot? radians?)
