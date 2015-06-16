@@ -39,32 +39,7 @@ def get_planets(m0, a_planets, m_planets, e_planets, phi=0.):
 
     return planets
 
-def get_ffp_in_orbit(m0, b_ffp, vinf_ffp, m_ffp, r_inf):
-    """
-    initialize attributes of the star and the ffp.
-    """
-
-    m0_and_ffp_in_orbit = Particles(2)
-
-    #Central star
-    m0_and_ffp_in_orbit[0].mass = m0
-    m0_and_ffp_in_orbit[0].position = (0,0,0) | nbody_system.length
-    m0_and_ffp_in_orbit[0].velocity = (0,0,0) | nbody_system.speed
-
-    #Free-floating planet
-
-    m0_and_ffp_in_orbit[1].mass = m_ffp
-    m0_and_ffp_in_orbit[1].x = -r_inf
-    m0_and_ffp_in_orbit[1].y = b_ffp
-    m0_and_ffp_in_orbit[1].z = 0. | nbody_system.length
-    m0_and_ffp_in_orbit[1].vx = vinf_ffp
-    m0_and_ffp_in_orbit[1].vy = 0. | nbody_system.speed
-    m0_and_ffp_in_orbit[1].vz = 0. | nbody_system.speed
-
-    return m0_and_ffp_in_orbit
-
-def get_ffp_in_orbit_2(m0, m, a, e, phi):
-
+def get_ffp_in_orbit(m0, m, a, e, phi):
     """
     initialize attributes of the star and the ffp.
     """
@@ -73,8 +48,8 @@ def get_ffp_in_orbit_2(m0, m, a, e, phi):
     star_ffp.position -= star_ffp[0].position
     star_ffp.velocity -= star_ffp[0].velocity
 
-    print star_ffp
     print 'v_inf_orb =',(star_ffp[1].vx**2+star_ffp[1].vy**2+star_ffp[1].vz**2).sqrt()
+    print star_ffp
 
     return star_ffp
 
@@ -300,7 +275,7 @@ def plot_orbital_elements(times,eccentricities,semimajoraxes,number_of_planets):
     savefig('orbitalelements.png')
     close()
 
-def convert_units(converter, t_end_p, m0_p, m_ffp_p, vinf_p, m_planets_p, a_planets_p, e_planets_p, n_steps_p, phi_p, b_p):
+def convert_units(converter, t_end_p, m0_p, m_ffp_p, m_planets_p, a_planets_p, e_planets_p, n_steps_p, phi_p, b_p):
 
     #time of integration in yr
     t_end = converter.to_nbody(t_end_p | units.yr)
@@ -310,9 +285,6 @@ def convert_units(converter, t_end_p, m0_p, m_ffp_p, vinf_p, m_planets_p, a_plan
 
     #mass of the FFP MJupiter
     m_ffp = converter.to_nbody(m_ffp_p | units.MJupiter)
-
-    #velocity of the FFP at a large distance (infinity) in km/s
-    vinf = converter.to_nbody(vinf_p | units.kms)
 
     #list of the masses of the bounded planets in MJupiter
     m_planets = converter.to_nbody(m_planets_p | units.MJupiter)
@@ -333,17 +305,18 @@ def convert_units(converter, t_end_p, m0_p, m_ffp_p, vinf_p, m_planets_p, a_plan
     b = converter.to_nbody(b_p | units.AU)
 
     #Set the velocity of FFP assuming parabolic orbit with respect to the star
+    r_inf = 40.*max(a_planets)
     mu = m0*m_ffp / (m0 + m_ffp)
-    ep_m0_ffp = ((1.0 | nbody_system.length)**3 * nbody_system.mass**-1 * nbody_system.time**-2)*m0*m_ffp / ((b**2 + r_inf**2).sqrt())
+    ep_m0_ffp = (1.0 | nbody_system.length**3 * nbody_system.time**-2 * nbody_system.mass**-1)*m0*m_ffp / ((b**2 + r_inf**2).sqrt())
     vx_ffp = (2.*ep_m0_ffp/mu).sqrt()
     print 'v_inf_theo =',vx_ffp
 
-    return t_end, m0, m_ffp, vinf, m_planets, a_planets, e_planets, n_steps, phi, b
+    return t_end, m0, m_ffp, m_planets, a_planets, e_planets, n_steps, phi, b
 
-def run_capture(t_end_p=650.0, m0_p=1.0, m_ffp_p=1.0, vinf_p=3.0, m_planets_p=[1.0], a_planets_p=[5.0], e_planets_p=[0.0], n_steps_p=10000, phi_p=0.0, b_p=5.0):
+def run_capture(t_end_p=650.0, m0_p=1.0, m_ffp_p=1.0, m_planets_p=[1.0], a_planets_p=[5.0], e_planets_p=[0.0], n_steps_p=10000, phi_p=0.0, b_p=5.0):
 
     """
-    Units: t_end(yr), m0(MSun), m_ffp(MJupiter), vinf(kms), m_planets(MJupiter), a_planets(AU), e_planets(None), n_steps(None), phi(degrees), b(AU)
+    Units: t_end(yr), m0(MSun), m_ffp(MJupiter), m_planets(MJupiter), a_planets(AU), e_planets(None), n_steps(None), phi(degrees), b(AU)
     """
 
     #Time starts
@@ -353,7 +326,7 @@ def run_capture(t_end_p=650.0, m0_p=1.0, m_ffp_p=1.0, vinf_p=3.0, m_planets_p=[1
     converter = nbody_system.nbody_to_si(1 | units.MSun,  5 | units.AU)
 
     #Conversion of units
-    t_end, m0, m_ffp, vinf, m_planets, a_planets, e_planets, n_steps, phi, b = convert_units(converter, t_end_p, m0_p, m_ffp_p, vinf_p, m_planets_p, a_planets_p, e_planets_p, n_steps_p, phi_p, b_p)
+    t_end, m0, m_ffp, m_planets, a_planets, e_planets, n_steps, phi, b = convert_units(converter, t_end_p, m0_p, m_ffp_p, m_planets_p, a_planets_p, e_planets_p, n_steps_p, phi_p, b_p)
 
     #Initialize planets
     planets = get_planets(m0,a_planets,m_planets,e_planets,phi)
@@ -364,16 +337,20 @@ def run_capture(t_end_p=650.0, m0_p=1.0, m_ffp_p=1.0, vinf_p=3.0, m_planets_p=[1
     r_inf = 40.*max(a_planets)
 
     #Initialize star and FFP
-    a_ffp = r_inf
-    b_ffp = b
-    e_ffp = (b_ffp/a_ffp)**2 + 1
-
+    # a_ffp = -r_inf**2
+    # b_ffp = -b
+    # e_ffp = (b_ffp/a_ffp)**2 + 1
+    # phi_ffp = -176.5
     # phi_ffp = 180 + numpy.degrees(math.atan(r_0/r_inf))
-    print 'e_ffp =',e_ffp
+
+    e_ffp = 1.000001
+    a_ffp = -(r_inf**2+(b**2)/(e_ffp**2-1)).sqrt()
+    phi_ffp = -179.5
+
+    print 'a_ffp =',a_ffp
 
     #Set the parabolic orbit of the ffp around the star
-    #star_and_ffp_in_orbit = get_ffp_in_orbit_2(m0, m_ffp, a_ffp, e_ffp, phi_ffp)
-    star_and_ffp_in_orbit = get_ffp_in_orbit(m0,b,vinf,m_ffp,r_inf)
+    star_and_ffp_in_orbit = get_ffp_in_orbit(m0, m_ffp, a_ffp, e_ffp, phi_ffp)
 
     #Particle superset: star, FFP, planets
     bodies = ParticlesSuperset([star_and_ffp_in_orbit, planets])
@@ -382,7 +359,7 @@ def run_capture(t_end_p=650.0, m0_p=1.0, m_ffp_p=1.0, vinf_p=3.0, m_planets_p=[1
     x,y,times,energies,eccentricities,semimajoraxes = evolve_gravity(bodies,number_of_planets,converter,t_end,n_steps)
 
     plot_trajectory(x,y,number_of_planets)
-    #plot_energy(times, energies)
+    plot_energy(times, energies)
     #plot_orbital_elements(times,eccentricities,semimajoraxes,number_of_planets)
 
     print '\nTime:', time.time()-start_time, 'seconds.'
