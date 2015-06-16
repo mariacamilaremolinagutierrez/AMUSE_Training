@@ -1,26 +1,29 @@
-import os
-import numpy as np
+import capture_ffp
 
-#Parameter Space
+t_end = 650.0 #yr
+m0 = 1.0 #MSun
+m_ffp = 1.0 #MJupiter
+vinf = 3.0 #kms
+m_planets = [1.0] #MJupiter
+a_planets = [5.0] #AU
+e_planets = [0.0]
+# m_planets = [1.0,2.0] #MJupiter
+# a_planets = [5.0,8.0] #AU
+# e_planets = [0.0,0.0]
+n_steps = 10000
 
-# -4r_0 < b < 4r_0
-#bs = np.linspace(-4*5,4*5,10)
-
-# 0 < phi < 0.7 (where 1=360 degrees)
-#phis = np.linspace(0,360*0.7,10)
-
-bs = [1.0]
-phis = [360*0.1]
-
-m_planets = '1.0 2.0'
-a_planets = '5.0 8.0'
-e_planets = '0.0 0.0'
-
-n_steps = 4000
+bs = [5.0] #AU
+phis = [360*0.1] #degrees
 
 for b in bs:
     for phi in phis:
-        long_command = 'amuse capture_ffp.py --b '+str(b)+' --phi '+str(phi)+' --m_planets '+m_planets+' --a_planets '+a_planets+' --e_planets '+e_planets+' --n_steps '+str(n_steps)+' > results.txt'
-        #command = 'amuse capture_ffp.py --b '+str(b)+' --phi '+str(phi)+' > results.txt'
-        #os.system(command)
-        os.system(long_command)
+        capture_ffp.run_capture(t_end_p=t_end,
+                                m0_p=m0,
+                                m_ffp_p=m_ffp,
+                                vinf_p=vinf,
+                                m_planets_p=m_planets,
+                                a_planets_p=a_planets,
+                                e_planets_p=e_planets,
+                                n_steps_p=n_steps,
+                                phi_p=phi,
+                                b_p=b)
