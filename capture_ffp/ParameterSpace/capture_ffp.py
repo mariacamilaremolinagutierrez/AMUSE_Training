@@ -82,7 +82,6 @@ def energies_binaries(bodies, indexA, indexB):
 
     kinetic_energy = (m_A*vsquared_A + m_B*vsquared_B)/2.0
 
-    #distances = (bodies.distances_squared(bodies[0])).sqrt()
     r_AB = (particleA.position - particleB.position).value_in(nbody_system.length)
     rmag_AB = math.sqrt(sum(r_AB*r_AB)) | nbody_system.length
 
@@ -103,21 +102,6 @@ def evolve_gravity(bodies, number_of_planets, converter, t_end, n_steps):
     gravity = initialize_code(bodies, timestep_parameter = dt.value_in(nbody_system.time))
     channel_from_gr_to_framework = gravity.particles.new_channel_to(bodies)
 
-    # x = AdaptingVectorQuantity()
-    # y = AdaptingVectorQuantity()
-    # times = AdaptingVectorQuantity()
-
-    #Order: 12, 23, 31
-    # eccentricities = []
-    # semimajoraxes = []
-
-    # Etot_init = gravity.kinetic_energy + gravity.potential_energy
-    # Etot = Etot_init
-    # DeltaE_max = 0.0 | nbody_system.energy
-    #
-    # # times.append(time)
-    # system_energies = [Etot.value_in(nbody_system.energy)]
-
     while time<=t_end:
 
         gravity.evolve_model(time)
@@ -127,32 +111,8 @@ def evolve_gravity(bodies, number_of_planets, converter, t_end, n_steps):
 
         gravity.particles.collection_attributes.timestamp = time
 
-        # x.append(bodies.x)
-        # y.append(bodies.y)
-        # times.append(time)
-
-        # for i in range(0,number_of_planets+2):
-        #     for j in range(i+1,number_of_planets+2):
-        #
-        #         binary = [bodies[i], bodies[j]]
-        #         massA, massB, semimajor_axis, eccentricity, true_anomaly, inclination, long_asc_node, arg_per = orbital_elements_from_binary(binary)
-        #
-        #         eccentricities.append(eccentricity)
-        #         semimajoraxes.append(semimajor_axis.value_in(nbody_system.length))
-
-        # Etot = gravity.kinetic_energy + gravity.potential_energy
-        # DeltaE = abs(Etot-Etot_init)
-        #
-        # system_energies.append(Etot.value_in(nbody_system.energy))
-        #
-        # if ( DeltaE > DeltaE_max ):
-        #     DeltaE_max = DeltaE
-
         time += dt
 
-    #print "Energy Change: max(|E_j - E_initial|)/E_initial = ", DeltaE_max/Etot_init
-
-    #results = ['flyby', 'temporary capture', 'exchange']
     results = [0,1,2,-1]
 
     planets_star_energies = []
@@ -171,14 +131,11 @@ def evolve_gravity(bodies, number_of_planets, converter, t_end, n_steps):
     elif (planets_star_energy>0 and ffp_star_energy<0):
         res = results[2]
     else:
-        #res = 'something that is not flyby, exchange or temporary capture has happened!'
         res = results[3]
 
     print res
 
     gravity.stop()
-
-    #return x,y,times,numpy.array(system_energies),numpy.array(eccentricities),numpy.array(semimajoraxes)
 
 def plot_trajectory(x,y,number_of_planets):
 
@@ -275,7 +232,6 @@ def plot_orbital_elements(times,eccentricities,semimajoraxes,number_of_planets):
         subplot.set_xlabel("$t$", fontsize=20)
         subplot.set_ylabel("$e$", fontsize=20)
         subplot.legend(loc='best', fontsize=20)
-        #subplot.set_ylim(0,3000)
 
         subplot=f.add_subplot(nrows,ncols,i+3)
 
@@ -389,9 +345,3 @@ if __name__ in ('__main__', '__plot__'):
 
     #x,y,times,energies,eccentricities,semimajoraxes = evolve_gravity(bodies,number_of_planets,converter,t_end,n_steps)
     evolve_gravity(bodies,number_of_planets,converter,t_end,n_steps)
-
-    #plot_trajectory(x,y,number_of_planets)
-    #plot_energy(times, energies)
-    #plot_orbital_elements(times,eccentricities,semimajoraxes,number_of_planets)
-
-    #print time.time()-start_time
